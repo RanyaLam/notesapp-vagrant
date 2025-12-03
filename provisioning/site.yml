@@ -1,0 +1,30 @@
+---
+- name: Deploy NotesApp on Kubernetes
+  hosts: all
+  become: yes
+  
+  vars:
+    dockerhub_username: "souff1159"
+  
+  roles:
+    - base
+    - docker
+    - kubernetes
+    - deploy
+  
+  post_tasks:
+    - name: Get Minikube IP
+      shell: minikube ip
+      register: minikube_ip
+      become_user: vagrant
+      become: yes
+      
+    - name: Display Final URL
+      debug:
+        msg:
+          - "================================================"
+          - "✅ DEPLOYMENT COMPLETE!"
+          - "================================================"
+          - "Access NotesApp at:"
+          - "http://notes.{{ minikube_ip.stdout }}.nip.io"
+          - "================================================"

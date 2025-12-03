@@ -1,0 +1,65 @@
+---
+- name: Copy app files
+  copy:
+    src: files/app
+    dest: /home/vagrant/
+    owner: vagrant
+    group: vagrant
+
+- name: Copy terraform files
+  copy:
+    src: files/terraform
+    dest: /home/vagrant/
+    owner: vagrant
+    group: vagrant
+
+- name: Get Minikube IP
+  shell: minikube ip
+  register: minikube_ip
+  become_user: vagrant
+  become: yes
+
+- name: Display Minikube IP
+  debug:
+    msg: "Minikube IP: {{ minikube_ip.stdout }}"
+
+- name: Update Terraform variables with correct hostname
+  replace:
+    path: /home/vagrant/terraform/variables.tf
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  loop:
+    - { regexp: '127\.0\.0\.1', replace: "{{ minikube_ip.stdout }}" }
+    - { regexp: 'notes\.nip\.io', replace: "notes.{{ minikube_ip.stdout }}.nip.io" }
+
+- name: Terraform init
+  shell: terraform init
+  args:
+    chdir: /home/vagrant/terraform
+  become_user: vagrant
+  become: yes
+
+- name: Terraform apply
+  shell: terraform apply -auto-approve
+  args:
+    chdir: /home/vagrant/terraform
+  become_user: vagrant
+  become: yes
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+
+- name: Wait for pods to be ready
+  pause:
+    seconds: 60
+
+- name: Get all resources
+  shell: kubectl get all -n notesapp
+  register: kube_resources
+  become_user: vagrant
+  become: yes
+  environment:
+    KUBECONFIG: /home/vagrant/.kube/config
+
+- name: Display resources
+  debug:
+    msg: "{{ kube_resources.stdout_lines }}"

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotesApp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        textarea {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .note {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+        .note-content {
+            flex: 1;
+            word-wrap: break-word;
+        }
+        .note-time {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        .delete-btn {
+            background: #e74c3c;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        .empty-state {
+            text-align: center;
+            color: #888;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 NotesApp</h1>
+        
+        <div class="input-group">
+            <textarea id="noteInput" placeholder="Write your note here..."></textarea>
+            <button onclick="addNote()">Add Note</button>
+        </div>
+        
+        <div id="notesList" class="notes-list"></div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+
+        async function loadNotes() {
+            try {
+                const response = await fetch(`${API_URL}/notes`);
+                const notes = await response.json();
+                displayNotes(notes);
+            } catch (error) {
+                console.error('Error loading notes:', error);
+            }
+        }
+
+        function displayNotes(notes) {
+            const notesList = document.getElementById('notesList');
+            
+            if (notes.length === 0) {
+                notesList.innerHTML = '<div class="empty-state">No notes yet. Add your first note above!</div>';
+                return;
+            }
+            
+            notesList.innerHTML = notes.map(note => `
+                <div class="note">
+                    <div>
+                        <div class="note-content">${escapeHtml(note.content)}</div>
+                        <div class="note-time">${new Date(note.created_at).toLocaleString()}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteNote(${note.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        async function addNote() {
+            const input = document.getElementById('noteInput');
+            const content = input.value.trim();
+            
+            if (!content) {
+                alert('Please write something!');
+                return;
+            }
+            
+            try {
+                await fetch(`${API_URL}/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                
+                input.value = '';
+                loadNotes();
+            } catch (error) {
+                console.error('Error adding note:', error);
+                alert('Failed to add note');
+            }
+        }
+
+        async function deleteNote(id) {
+            if (!confirm('Delete this note?')) return;
+            
+            try {
+                await fetch(`${API_URL}/delete/${id}`, {
+                    method: 'DELETE'
+                });
+                loadNotes();
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                alert('Failed to delete note');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load notes on page load
+        loadNotes();
+    </script>
+</body>
+</html>

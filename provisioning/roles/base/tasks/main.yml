@@ -1,0 +1,21 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - jq
+      - vim
+      - net-tools
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - unzip
+    state: present

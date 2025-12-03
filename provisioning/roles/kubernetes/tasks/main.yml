@@ -1,0 +1,61 @@
+---
+- name: Download kubectl
+  get_url:
+    url: https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+- name: Download Minikube
+  get_url:
+    url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    dest: /usr/local/bin/minikube
+    mode: '0755'
+
+- name: Download Terraform
+  unarchive:
+    src: https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip
+    dest: /usr/local/bin
+    remote_src: yes
+    creates: /usr/local/bin/terraform
+
+- name: Install Helm
+  shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    creates: /usr/local/bin/helm
+
+- name: Create .kube directory
+  file:
+    path: /home/vagrant/.kube
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: '0755'
+
+- name: Reset SSH connection to apply docker group
+  meta: reset_connection
+
+- name: Start Minikube
+  shell: sg docker -c "minikube start --driver=docker --cpus=2 --memory=3072"
+  become_user: vagrant
+  become: yes
+  environment:
+    HOME: /home/vagrant
+
+- name: Wait for Minikube to be ready
+  pause:
+    seconds: 30
+
+- name: Enable Ingress
+  shell: minikube addons enable ingress
+  become_user: vagrant
+  become: yes
+
+- name: Enable MetalLB
+  shell: minikube addons enable metallb
+  become_user: vagrant
+  become: yes
+
+- name: Update kubeconfig
+  shell: minikube update-context
+  become_user: vagrant
+  become: yes
